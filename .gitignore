@@ -1,0 +1,11 @@
+# Large application image (~725 MB) — exceeds GitHub's file-size limit.
+# The app downloads it from the public registry on first run and rebuilds it
+# locally, so it does not need to live in git.
+picasa-image.tar
+
+# User/machine-specific runtime files (created by setup/first run)
+picasa.conf
+PicasaDB/
+
+# OS cruft
+.DS_Store

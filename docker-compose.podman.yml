@@ -1,0 +1,6 @@
+# Podman-only override (added automatically when running under Podman).
+# keep-id maps your host user to the same UID inside the container so a rootless
+# container can read/write the pictures and database folders you own.
+services:
+  picasa:
+    userns_mode: "keep-id"

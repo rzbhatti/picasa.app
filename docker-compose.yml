@@ -1,0 +1,24 @@
+# Picasa — container definition. Values come from picasa.conf via run.sh/setup.sh.
+services:
+  picasa:
+    image: ${IMAGE:-picasa-app:latest}
+    container_name: picasa
+    ports:
+      - "5800:5800"                       # web UI (noVNC)
+    volumes:
+      - picasa_config:/config             # Wine prefix (per-machine, auto-created)
+      - "${PHOTOS_DIR}:/storage/photos"   # your pictures  -> drive P:\
+      - "${PICASADB_DIR}:/storage/picasadb"  # Picasa database (persists here)
+    environment:
+      - PICASA_DATA_DIR=/storage/picasadb    # Picasa writes its catalog here
+      - DISPLAY_WIDTH=${DISPLAY_WIDTH:-1920}
+      - DISPLAY_HEIGHT=${DISPLAY_HEIGHT:-1080}
+      - USER_ID=${USER_ID:-1000}
+      - GROUP_ID=${GROUP_ID:-1000}
+      - TZ=${TZ:-UTC}
+    shm_size: "1gb"
+    restart: unless-stopped
+
+volumes:
+  picasa_config:
+    name: picasa_config

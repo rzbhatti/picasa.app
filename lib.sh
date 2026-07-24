@@ -150,6 +150,54 @@ heal_native_i386() {
     esac
 }
 
+# macOS only: the Docker Linux VM (Colima or Docker Desktop) can only bind-mount
+# host paths that are explicitly shared with it. Colima shares just the home dir
+# by default; Docker Desktop shares a fixed list and can refuse or empty-mount an
+# external drive. If the app's drive isn't shared, every bind mount silently
+# becomes an EMPTY folder (empty P:\, a database that never persists) — or the
+# engine refuses to start. We prove the VM can actually see this folder by
+# bind-mounting it into a throwaway container and looking for a marker file (works
+# on ANY macOS Docker backend). Runs after the image is loaded so it can reuse
+# $IMAGE (no extra download). Prints a backend-specific fix and aborts if not shared.
+check_vm_sees_files() {
+    [ "$(uname -s 2>/dev/null)" = "Darwin" ] || return 0
+
+    local marker=".picasa-mnt-check.$$"
+    ( : > "$APP_DIR/$marker" ) 2>/dev/null || return 0   # can't write here -> skip
+    local seen=1
+    $ENGINE run --rm --entrypoint ls -v "$APP_DIR:/___chk:ro" "$IMAGE" "/___chk/$marker" \
+        >/dev/null 2>&1 || seen=0
+    rm -f "$APP_DIR/$marker"
+    [ "$seen" = 1 ] && return 0
+
+    local drive; drive="$(drive_root "$APP_DIR")"
+    {
+        echo
+        echo "ERROR: this app lives on '$drive', which is NOT shared with the Docker virtual"
+        echo "       machine, so Picasa would see an empty P:\\ and could not save its database."
+        echo
+        if command -v colima >/dev/null 2>&1 && docker context show 2>/dev/null | grep -qi colima; then
+            echo "You're using Colima. Share the drive once, then restart the VM:"
+            echo
+            echo "    colima stop"
+            echo "    colima start --mount \"$drive:w\""
+            echo
+            echo "  (or add to ~/.colima/default/colima.yaml under 'mounts:' then 'colima restart':"
+            echo "      mounts:"
+            echo "        - location: $drive"
+            echo "          writable: true )"
+        else
+            echo "You're using Docker Desktop. Share the drive in the app:"
+            echo
+            echo "    Settings  ->  Resources  ->  File sharing"
+            echo "    Add:  $drive     then click 'Apply & restart'"
+        fi
+        echo
+        echo "Then run ./run.sh again."
+    } >&2
+    exit 1
+}
+
 pick_compose() {
     COMPOSE_FILES=(-f "$APP_DIR/docker-compose.yml")
     if [ "$ENGINE" = docker ]; then

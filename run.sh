@@ -39,6 +39,9 @@ heal_native_i386
 # --- ensure the application image is present (tar, or download to restore) ---
 ensure_image || exit 1
 
+# --- macOS: verify the app's drive is actually shared with the Docker VM ------
+check_vm_sees_files
+
 # --- launch ------------------------------------------------------------------
 echo "==> Starting Picasa…"
 "${COMPOSE[@]}" "${COMPOSE_FILES[@]}" up -d

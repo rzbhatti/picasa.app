@@ -97,12 +97,46 @@ is restored for next time.
 
 ## Performance
 
-Picasa is a 32-bit application. On a **Linux computer with an Intel/AMD (amd64)
-CPU** it runs at full, native speed. On **macOS (via Docker Desktop)** the 32-bit
-code is emulated, so Picasa's heavy tasks — building thumbnails, indexing a large
-library, face detection — run noticeably slower (the window itself stays
-responsive). For a big photo library, a Linux/amd64 machine gives the best
-experience; the same folder works in both places.
+Picasa is a 32-bit application.
+
+- **Linux (Intel/AMD, amd64):** full native speed.
+- **macOS on Intel:** also native — `run.sh` removes an emulation shim the Docker
+  virtual machine installs for 32-bit programs (see **macOS notes** below), so
+  Picasa runs at full speed.
+- **macOS on Apple Silicon (M-series):** the whole app image is Intel code and is
+  emulated by the Docker VM, so heavy tasks — building thumbnails, indexing a large
+  library, face detection — run noticeably slower (the window itself stays
+  responsive).
+
+For a very large library, a Linux/amd64 or Intel Mac gives the best experience; the
+same folder works everywhere.
+
+---
+
+## macOS notes
+
+On macOS, Docker runs inside a lightweight Linux virtual machine (**Colima** or
+**Docker Desktop**). `run.sh` automatically handles two macOS-only quirks every time
+it starts — you don't need to do anything, but here's what it does and why:
+
+1. **Full-speed 32-bit (no black screen).** The VM installs an emulator that
+   intercepts 32-bit programs like Picasa and runs them very slowly — often showing
+   just a **black screen** in the browser. The VM can actually run 32-bit code
+   natively, so `run.sh` removes that emulator on every launch (the VM re-adds it
+   whenever it restarts).
+
+2. **Making your drive visible to Docker.** The VM can only open folders that are
+   *shared* with it. If this app (and your pictures/database) sit on a drive that
+   isn't shared — commonly an **external drive** — Picasa opens to an **empty `P:\`**
+   and **can't save its catalog**. `run.sh` detects this before starting and prints
+   the exact one-time fix for your setup:
+   - **Colima:** `colima start --mount "<your-drive>:w"` (then re-run `./run.sh`).
+   - **Docker Desktop:** *Settings ▸ Resources ▸ File sharing* → add the drive →
+     *Apply & restart*.
+
+   Colima shares only your home folder by default, so an external drive must be added
+   once as above. This sharing setting lives on each Mac, so you repeat it the first
+   time you use the app on a new Mac.
 
 ---
 
@@ -112,6 +146,12 @@ experience; the same folder works in both places.
   `docker logs -f picasa` (or `podman logs -f picasa`). Then check services:
   `docker exec -it picasa supervisorctl -c /etc/supervisor/supervisord.conf status`
   (all should be `RUNNING`).
+- **Black screen on macOS:** almost always the 32-bit emulator (see **macOS
+  notes**). `run.sh` removes it automatically each launch — if you started the
+  container another way, run `./stop.sh && ./run.sh`.
+- **Empty `P:\`, or your folder/album settings don't persist (macOS):** your drive
+  isn't shared with the Docker VM (see **macOS notes**). Run `./run.sh` and follow
+  the one-time fix it prints.
 - **"Permission denied" writing to your folders (Linux):** the container runs as
   your user ID by default. If your files are owned by a different user, adjust
   `USER_ID`/`GROUP_ID` in `docker-compose.yml` and run `./stop.sh && ./run.sh`.

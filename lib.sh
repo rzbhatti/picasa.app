@@ -131,6 +131,25 @@ pick_engine() {
     fi
 }
 
+# On macOS, the Docker/Podman Linux VM (Colima, Docker Desktop) registers a
+# 'qemu-i386' binfmt handler that hijacks all 32-bit x86 binaries and runs them
+# under emulation. Picasa is a 32-bit app, so this makes Wine crawl and noVNC
+# shows a black screen. The VM's amd64 kernel runs i386 natively, so we drop the
+# emulator. It gets re-registered every time the VM restarts, hence we heal it on
+# each launch. No-op on native Linux and when the handler isn't present.
+heal_native_i386() {
+    [ "$(uname -s 2>/dev/null)" = "Darwin" ] || return 0
+    local info
+    info="$($ENGINE run --rm --privileged tonistiigi/binfmt 2>/dev/null)" || return 0
+    case "$info" in
+        *qemu-i386*)
+            echo "==> Enabling native 32-bit execution (removing qemu-i386 emulator)…"
+            $ENGINE run --rm --privileged tonistiigi/binfmt --uninstall qemu-i386 >/dev/null 2>&1 \
+                || echo "    (note: couldn't remove qemu-i386; Picasa may run slowly)"
+            ;;
+    esac
+}
+
 pick_compose() {
     COMPOSE_FILES=(-f "$APP_DIR/docker-compose.yml")
     if [ "$ENGINE" = docker ]; then

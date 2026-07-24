@@ -33,6 +33,9 @@ pick_engine
 pick_compose
 echo "==> Using $ENGINE"
 
+# --- macOS: ensure 32-bit Wine runs natively, not under qemu emulation ---
+heal_native_i386
+
 # --- ensure the application image is present (tar, or download to restore) ---
 ensure_image || exit 1
 

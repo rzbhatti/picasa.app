@@ -1,22 +1,58 @@
-# Picasa (portable)
+<h1 align="center">
+  <img src="images/picasa-logo.png" alt="" width="104"><br>
+  Picasa, in your browser
+</h1>
 
-A ready-to-run, containerized copy of **Google Picasa 3.9** that you open in your
-**web browser**. It runs the same on **macOS and Linux**, from a **local folder or
-an external drive** — nothing is installed on the computer itself.
+<p align="center">
+  <em>A ready-to-run, containerized copy of Google Picasa 3.9 — nothing installed on the computer itself.</em>
+</p>
 
-Picasa runs inside a container (via Wine) and its screen is streamed to your
+[**Picasa**](https://en.wikipedia.org/wiki/Picasa) was Google's desktop photo
+organizer: fast local browsing, albums, face recognition and non-destructive
+edits, all working directly on ordinary folders of files. Google discontinued it
+in 2016 in favour of the web-based Google Photos, and a lot of people never found
+a replacement they liked as much.
+
+This is Picasa 3.9 — the final release — packaged to run in a container and open
+in your **web browser**. It works the same on **macOS and Linux**, from a **local
+folder or an external drive**.
+
+Picasa runs inside the container (via Wine) and its screen is streamed to your
 browser. Your **pictures and your Picasa catalog live in folders you choose**, so
 your albums, edits and face tags stay with your photos.
+
+<p align="center">
+  <img src="images/picasa-about-wine.png" alt="Picasa 3.9.141 build 259 running under Wine, viewed in a browser" width="600">
+</p>
+
+<p align="center">
+  <sub>Picasa 3.9.141 (build 259) running under Wine in the container, viewed in a
+  browser. The window frame is Wine's.</sub>
+</p>
 
 ---
 
 ## Requirements
 
-- **Docker** (Docker Desktop on macOS/Windows, or Docker Engine on Linux) **or
-  Podman**, installed and running.
-- A web browser.
+- **macOS or Linux**, and a web browser.
+- **Docker or Podman**, installed and running. If you don't have either, the app
+  offers to install one for you — or run it yourself:
 
-That's all — no Wine, no Picasa installer, no setup on the host.
+  ```bash
+  ./install-engine.sh
+  ```
+
+  It asks which engine you want, shows every command before running it, and
+  installs nothing without your say-so. On macOS it uses Homebrew (Colima,
+  Docker Desktop or Podman); on Linux it uses your package manager and
+  recommends Podman, which is rootless and works without a re-login.
+
+That's all — no Wine, no Picasa installer, no other setup on the host.
+
+> **On Windows:** Picasa 3.9 is itself a Windows application, so you don't need
+> any of this — just install Picasa directly, which is simpler and faster. If you
+> do want the container version for consistency across machines, run
+> `./install-engine.sh` inside **WSL2** and it will tell you what to set up.
 
 ---
 
@@ -142,6 +178,10 @@ it starts — you don't need to do anything, but here's what it does and why:
 
 ## Troubleshooting
 
+- **"No container engine found" / "Docker or Podman is required":** the computer
+  has neither installed (or Docker isn't running). Run `./install-engine.sh`, or
+  say yes when `./run.sh` offers to do it. If you just installed Docker on Linux,
+  you must log out and back in before it works without `sudo`.
 - **Nothing shows / grey screen:** check the logs —
   `docker logs -f picasa` (or `podman logs -f picasa`). Then check services:
   `docker exec -it picasa supervisorctl -c /etc/supervisor/supervisord.conf status`
@@ -169,6 +209,7 @@ it starts — you don't need to do anything, but here's what it does and why:
 
 | File | Purpose |
 |------|---------|
+| `install-engine.sh` | Install Docker or Podman if the computer has neither |
 | `setup.sh` | Configure the pictures & database locations |
 | `run.sh` | Start Picasa (auto-configures, auto-relocates on a moved drive) |
 | `stop.sh` | Stop Picasa |
@@ -177,3 +218,74 @@ it starts — you don't need to do anything, but here's what it does and why:
 | `picasa-image.tar` | *(optional)* the application image, for offline use |
 | `lib.sh` | Shared helper functions used by the scripts |
 | `picasa.conf` | *(created by setup)* your saved locations |
+| `images/` | Pictures used by this README |
+| `LICENSE` | MIT licence for this project's own files |
+| `build/` | How the container image is built — only needed if you want to rebuild it |
+
+---
+
+## Where the image comes from
+
+You don't need to build anything. On first run the app obtains the container
+image in this order:
+
+1. **`picasa-image.tar`** in this folder, if present and valid → loaded directly,
+   so **no internet is needed**.
+2. Otherwise it **pulls from the public registry**
+   `quay.io/wine_apps/picasa-3.9`, tags it locally as `picasa-app:latest`, and
+   then **writes `picasa-image.tar` back into this folder** — so the next run, and
+   any other machine you carry this folder to, works offline.
+
+   **No account or `docker login` is needed.** That Quay repository is public and
+   pulls anonymously, so step 2 just works on a fresh machine.
+
+The tar is around 725 MB, so it is deliberately **not** stored in git; it is
+rebuilt locally as described above. If it ever gets corrupted, delete it and run
+`./run.sh` again.
+
+To rebuild the image from source instead — for example to audit it, or to use a
+different Picasa installer — see [`build/README.md`](build/README.md). Note that
+Picasa itself is proprietary and is **not** included in this repository; building
+requires your own copy of the installer.
+
+---
+
+## Licensing and provenance
+
+- **Picasa is proprietary Google software**, discontinued in 2016 and no longer
+  distributed or supported by Google. This is an unofficial, unaffiliated
+  repackaging for personal use, not endorsed by Google.
+- **The Picasa installer is not in this repository** — see
+  [`build/README.md`](build/README.md) if you want to build the image yourself.
+- **The Picasa name, logo and screenshot** here are Google trademarks/copyright,
+  used only to identify and document the software this runs.
+- **Wine, Debian, noVNC, x11vnc, Xvfb, openbox and supervisor** are used as
+  packaged by Debian, under their own licenses.
+- The **packaging** — scripts, compose files, Dockerfile and documentation — is
+  this project's own work, released under the **MIT License**
+  ([`LICENSE`](LICENSE)).
+
+  To be explicit about what that covers: the MIT licence applies **only to the
+  files in this repository**. It grants you no rights whatsoever to Picasa
+  itself, to Google's trademarks, or to the contents of the prebuilt container
+  image, none of which are this project's to license.
+
+---
+
+## A note on access
+
+There is **no password on the web interface**. Anyone who can reach port 5800 on
+the machine running it can control Picasa, and through its file dialogs, the
+folders you mounted. That's fine on a computer you're sitting at.
+
+If the machine is on a network you don't fully trust, bind it to loopback only —
+change the ports line in `docker-compose.yml` to:
+
+```yaml
+      - "127.0.0.1:5800:5800"
+```
+
+and reach it over an SSH tunnel instead:
+`ssh -L 5800:localhost:5800 you@thatmachine`, then open `http://localhost:5800`.
+Don't expose it directly to the internet without a reverse proxy providing
+authentication and TLS.

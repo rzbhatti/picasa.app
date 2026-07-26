@@ -1,0 +1,24 @@
+# Picasa-under-Wine, streamed to a browser on http://localhost:5800
+#
+# Pulls the published image from Quay by default. Override the reference by
+# setting IMAGE in a .env file next to this compose file (or in your shell),
+# e.g. IMAGE=quay.io/wine_apps/picasa-3.9:3.9.141.259. For a purely local
+# build/run, uncomment the `build:` block below.
+services:
+  picasa:
+    image: ${IMAGE:-quay.io/wine_apps/picasa-3.9:latest}
+    # build: .            # uncomment to build locally instead of pulling
+    container_name: picasa
+    ports:
+      - "5800:5800"        # noVNC web UI
+    volumes:
+      - ./config:/config           # Wine prefix + Picasa DB/settings (persistent)
+      - ./photos:/storage/photos   # your photos, read-write (persistent)
+    environment:
+      - DISPLAY_WIDTH=1920
+      - DISPLAY_HEIGHT=1080
+      - TZ=UTC
+      - USER_ID=1000
+      - GROUP_ID=1000
+    shm_size: "1gb"        # headroom for Wine + X; avoids random crashes
+    restart: unless-stopped

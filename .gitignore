@@ -3,9 +3,19 @@
 # locally, so it does not need to live in git.
 picasa-image.tar
 
+# The Picasa installer is proprietary and is never committed. It is kept outside
+# this repository; build/build-and-push.sh stages a copy into build/ only for
+# the duration of a build and removes it afterwards. This is the safety net in
+# case a build is interrupted before that cleanup runs.
+*.exe
+
 # User/machine-specific runtime files (created by setup/first run)
 picasa.conf
 PicasaDB/
+
+# Working folders created by build/run.sh when testing the image
+build/config/
+build/photos/
 
 # OS cruft
 .DS_Store

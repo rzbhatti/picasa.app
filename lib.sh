@@ -123,12 +123,38 @@ ensure_image() {
 pick_engine() {
     if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
         ENGINE=docker
+        return 0
     elif command -v podman >/dev/null 2>&1; then
         ENGINE=podman
-    else
-        echo "ERROR: Docker or Podman is required, but neither is available/running." >&2
-        return 1
+        return 0
     fi
+
+    # Nothing usable. On a fresh machine that is the expected first experience, so
+    # offer to install one rather than just failing. Only when someone is actually
+    # at the keyboard -- never silently, and never in a script/CI context.
+    echo "==> No container engine found (Docker or Podman is required)." >&2
+    if [ -t 0 ] && [ -x "$APP_DIR/install-engine.sh" ]; then
+        local reply
+        printf 'Install one now? [y/N] ' >&2
+        read -r reply </dev/tty || reply=n
+        case "$reply" in
+            [Yy]*)
+                "$APP_DIR/install-engine.sh" || true
+                # Re-check: the installer may have made an engine available.
+                if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+                    ENGINE=docker; return 0
+                elif command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
+                    ENGINE=podman; return 0
+                fi
+                echo "ERROR: still no working engine — see the notes above, then re-run ./run.sh" >&2
+                return 1
+                ;;
+        esac
+    fi
+
+    echo "ERROR: Docker or Podman is required, but neither is available/running." >&2
+    echo "       Run ./install-engine.sh to set one up." >&2
+    return 1
 }
 
 # On macOS, the Docker/Podman Linux VM (Colima, Docker Desktop) registers a
